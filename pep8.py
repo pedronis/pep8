@@ -233,7 +233,7 @@ def maximum_line_length(physical_line, max_line_length):
 
 
 def blank_lines(logical_line, blank_lines, indent_level, line_number,
-                previous_logical, previous_indent_level):
+                previous_logical, previous_indent_level, checkers_state):
     r"""
     Separate top-level function and class definitions with two blank lines.
 
@@ -256,6 +256,17 @@ def blank_lines(logical_line, blank_lines, indent_level, line_number,
     """
     if line_number < 3 and not previous_logical:
         return  # Don't expect blank lines before the first line
+    try:
+        in_def = checkers_state.in_def
+    except AttributeError:
+        in_def = checkers_state.in_def = None
+    if in_def is not None:
+        if indent_level <= in_def:
+            checkers_state.in_def = None
+    def_line = False
+    if checkers_state.in_def is None and logical_line.startswith('def '):
+        checkers_state.in_def = indent_level
+        def_line = True
     if previous_logical.startswith('@'):
         if blank_lines:
             yield 0, "E304 blank lines found after function decorator"
@@ -265,7 +276,8 @@ def blank_lines(logical_line, blank_lines, indent_level, line_number,
         if indent_level:
             if not (blank_lines or previous_indent_level < indent_level or
                     DOCSTRING_REGEX.match(previous_logical)):
-                yield 0, "E301 expected 1 blank line, found 0"
+                if checkers_state.in_def is None or def_line:
+                    yield 0, "E301 expected 1 blank line, found 0"
         elif blank_lines != 2:
             yield 0, "E302 expected 2 blank lines, found %d" % blank_lines
 
@@ -1171,6 +1183,9 @@ def init_checks_registry():
 init_checks_registry()
 
 
+class _checkers_state(object):
+    pass
+
 class Checker(object):
     """
     Load a Python source file, tokenize it, check coding style.
@@ -1214,6 +1229,7 @@ class Checker(object):
                     self.lines[0] = self.lines[0][3:]
         self.report = report or options.report
         self.report_error = self.report.error
+        self.checkers_state = _checkers_state()
 
     def report_invalid_syntax(self):
         exc_type, exc = sys.exc_info()[:2]

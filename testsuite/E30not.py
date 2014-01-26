@@ -132,3 +132,20 @@ def a():
 def b():
 
     pass
+
+
+# own judgement for blank lines for def and class inside defs
+def a():
+    x = 1
+    def b():
+        def c():
+            pass
+
+
+def f():
+    x = 1
+    class A():
+        y = 2
+        def m():
+            def i():
+                pass
