@@ -1186,6 +1186,7 @@ init_checks_registry()
 class _checkers_state(object):
     pass
 
+
 class Checker(object):
     """
     Load a Python source file, tokenize it, check coding style.
